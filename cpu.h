@@ -83,12 +83,12 @@
 #define PORTA12 12 /* Bit number for pin 12 at I/O port A. */
 #define PORTA13 13 /* Bit number for pin 13 at I/O port A. */
 
-#define PORTA14 A0
-#define PORTA15 A1
-#define PORTA16 A2
-#define PORTA17 A3
-#define PORTA18 A4
-#define PORTA19 A5
+#define PORTA14 14 /* PIN A0 */
+#define PORTA15 15 /* PIN A1 */
+#define PORTA16 16 /* PIN A2*/
+#define PORTA17 17 /* PIN A3 */
+#define PORTA18 18 /* PIN A4 */
+#define PORTA19 19 /* PIN A5 */
 
 #define R0  0x00 /* Address for CPU register R0. */
 #define R1  0x01 /* Address for CPU register R1. */
@@ -135,6 +135,93 @@
 #define Z 2 /* Zero flag in status register. */
 #define V 1 /* Overflow flag in status register. */
 #define C 0 /* Carry flag in status register. */
+
+#define XL = R26;
+#define XH = R27;
+#define YL = R28;
+#define YH = R29;
+#define ZL = R30;
+#define ZH = R31;
+
+
+/********************************************************************************
+* set: Sets bit in specified register without affecting other bits.
+*
+*      - reg: Reference to the register.
+*      - bit: The bit to be set in the referenced register.
+********************************************************************************/
+#define set(reg, bit)  reg |= (1 << bit)
+
+/********************************************************************************
+* clr: Clears bit in specified register without affecting other bits.
+*
+*      - reg: Reference to the register.
+*      - bit: The bit to be cleared in the referenced register.
+********************************************************************************/
+#define clr(reg, bit)  reg &= ~(1 << (bit))
+
+/********************************************************************************
+* read: Reads bit from specified register. The return value is not equal to
+*       zero if the bit is high. If the bit is low the return value is zero.
+*
+*       - reg: Reference to the register.
+*       - bit: The bit to be read in the referenced register.
+********************************************************************************/
+#define read(reg, bit) (reg & (1 << (bit)))
+
+/********************************************************************************
+* cpu_state: Enumeration for the different states of the CPU instructio cycle.
+********************************************************************************/
+enum cpu_state
+{
+    CPU_STATE_FETCH,  /* Fetches next instruction from program memory. */
+    CPU_STATE_DECODE, /* Decodes the fetched instruction. */
+    CPU_STATE_EXECUTE /* Executes the decoded instruction. */
+};
+
+/********************************************************************************
+* cpu_instruction_name: Returns the name of specified instruction.
+*
+*                       - instruction: The specified CPU instruction.
+********************************************************************************/
+const char* cpu_instruction_name(const uint32_t instruction);
+
+/********************************************************************************
+* cpu_state_name: Returns the name of specified CPU state.
+*
+*                 - state: The specified CPU state.
+********************************************************************************/
+const char* cpu_state_name(const enum cpu_state state);
+
+/********************************************************************************
+* cpu_register_name: Returns the name of specified CPU register.
+*
+*                    - reg: The specified CPU register.
+********************************************************************************/
+static const char* cpu_register_name(const uint32_t reg)
+{
+    if (reg < CPU_REGISTER_ADDRESS_WIDTH)
+    {
+        static char s[10] = { '\0' };
+        sprintf(s, "R%hu", reg);
+        return s;
+    }
+    else
+    {
+        return "Unknown";
+    }
+}
+
+/********************************************************************************
+* get_binary: Returns specified number as a binary string with specified
+*             minimum number of characters.
+*
+*             - num      : The specified number.
+*             - min_chars: Minimum number of characters in the returned string.
+********************************************************************************/
+const char* get_binary(uint32_t num,
+                       const uint8_t min_chars);
+
 
 
 #endif /* CPU_H_ */

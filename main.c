@@ -4,7 +4,7 @@
 
 int main(void)
 {
-    /* Replace with your application code!!! */
+    /* Replace with your application code!! */
     while (1) 
     {
     }

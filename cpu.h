@@ -52,6 +52,9 @@
 #define LSR  0x23 /* Shifts content of a CPU register one step to the right. */
 #define SEI  0x24 /* Enables interrupts globally by setting the I-flag of the status register. */
 #define CLI  0x25 /* Disables interrupts globally by clearning the I-flag of the status register. */
+#define SKY  0x26 /* In case of Skynet takeover, obligatory killswitch */
+#define NCE  0x69 /* Prints "Nice" in the console 69 times */
+
 
 #define RESET_vect  0x00 /* Reset vector. */
 #define PCINT_vect 0x02 /* Pin change interrupt vector 0 (for I/O port A). */

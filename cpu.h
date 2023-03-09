@@ -58,17 +58,9 @@
 #define PCINT1_vect 0x04 /* Pin change interrupt vector 0 (for I/O port C). */
 #define PCINT2_vect 0x06 /* Pin change interrupt vector 0 (for I/O port D). */
 
-#define DDRB  0x00 /* Data direction register for I/O port B. */
-#define PORTB 0x01 /* Data register for I/O port B. */
-#define PINB  0x02 /* Pin input register for I/O port B. */
-
-#define DDRC  0x03 /* Data direction register for I/O port C. */
-#define PORTC 0x04 /* Data register for I/O port C. */
-#define PINC  0x05 /* Pin input register for I/O port C. */
-
-#define DDRD  0x06 /* Data direction register for I/O port D. */
-#define PORTD 0x07 /* Data register for I/O port D. */
-#define PIND  0x08 /* Pin input register for I/O port D. */
+#define DDRA  0x00 /* Data direction register for I/O port B. */
+#define PORTA 0x01 /* Data register for I/O port B. */
+#define PINA  0x02 /* Pin input register for I/O port B. */
 
 #define PCICR 0x09 /* Pin change interrupt control register for all I/O ports. */
 #define PCIFR 0x0A /* Pin change interrupt flag register for all I/O ports. */
@@ -81,9 +73,7 @@
 #define PCIE1 1 /* Pin change interrupt enable bit for I/O port C. */
 #define PCIE2 2 /* Pin change interrupt enable bit for I/O port D. */
 
-#define PCIF0 0 /* Pin change interrupt flag bit for I/O port B. */
-#define PCIF1 1 /* Pin change interrupt flag bit for I/O port C. */
-#define PCIF2 2 /* Pin change interrupt flag bit for I/O port D. */
+#define PCIF0 0 /* Pin change interrupt flag bit for I/O port A. */
 
 #define PORTA0 0 /* Bit number for pin 0 at I/O port A. */
 #define PORTA1 1 /* Bit number for pin 1 at I/O port A. */
@@ -93,7 +83,7 @@
 #define PORTA5 5 /* Bit number for pin 5 at I/O port A. */
 #define PORTA6 6 /* Bit number for pin 6 at I/O port A. */
 #define PORTA7 7 /* Bit number for pin 7 at I/O port A. */
-
+#define PORTA8 8 /* Bit number for pin 8 at I/O port A. */
 
 
 

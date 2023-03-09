@@ -196,7 +196,7 @@ const char* cpu_state_name(const enum cpu_state state);
 /********************************************************************************
 * cpu_register_name: Returns the name of specified CPU register.
 *
-*                    - reg: The specified CPU register.
+*                    - reg: The specified CPU register..
 ********************************************************************************/
 static const char* cpu_register_name(const uint32_t reg)
 {

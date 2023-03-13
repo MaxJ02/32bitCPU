@@ -84,12 +84,12 @@
 #define PORTA12 12 /* Bit number for pin 12 at I/O port A. */
 #define PORTA13 13 /* Bit number for pin 13 at I/O port A. */
 
-#define PORTA14 A0
-#define PORTA15 A1
-#define PORTA16 A2
-#define PORTA17 A3
-#define PORTA18 A4
-#define PORTA19 A5
+#define PORTA14 14 //A0
+#define PORTA15 15//A1
+#define PORTA16 16 //A2
+#define PORTA17 17 //A3
+#define PORTA18 18 //A4
+#define PORTA19 19 //A5
 
 #define R0  0x00 /* Address for CPU register R0. */
 #define R1  0x01 /* Address for CPU register R1. */

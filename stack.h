@@ -10,7 +10,7 @@
 
 /* Static functions: */
 #define STACK_ADDRESS_WIDTH 512 /* 512 unique addresses (0 - 511). */
-#define STACK_DATA_WIDTH 32     /* 8 bit storage capcity per address. */
+#define STACK_DATA_WIDTH 32     /* 32 bit storage capcity per address. */
 
 /********************************************************************************
 * stack_reset: Clears the stack.

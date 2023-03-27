@@ -6,7 +6,7 @@
 
 //Macro definitions
 #define DATA_MEMORY_ADDRESS_WIDTH 512
-#define DATA_MEMORY_DATA_WITH 32
+#define DATA_MEMORY_DATA_WIDTH 32
 
 //Clears data
 void data_memory_reset(void);
@@ -23,5 +23,4 @@ int data_memory_write(
 int data_memory_read(
 	const uint16_t address
 );
-
 #endif

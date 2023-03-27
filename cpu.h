@@ -1,7 +1,8 @@
-/********************************************************************************
-* cpu.h: Contains miscellaneous definitions and declarations for implementation
-*        of a 32-bit processor
-********************************************************************************/
+
+/***********************************************************************************
+* cpu.h: Contains miscellaneous definitions and declarations for the implementation
+*        of a 32-bit processor..
+************************************************************************************/
 
 #ifndef CPU_H_
 #define CPU_H_
@@ -52,28 +53,23 @@
 #define LSR  0x23 /* Shifts content of a CPU register one step to the right. */
 #define SEI  0x24 /* Enables interrupts globally by setting the I-flag of the status register. */
 #define CLI  0x25 /* Disables interrupts globally by clearning the I-flag of the status register. */
+#define SKY  0x26 /* SKYNET killswitch*/
+#define NCE  0x69 /* prints nice 69 times */
 
 #define RESET_vect  0x00 /* Reset vector. */
-#define PCINT0_vect 0x02 /* Pin change interrupt vector 0 (for I/O port B). */
-#define PCINT1_vect 0x04 /* Pin change interrupt vector 0 (for I/O port C). */
-#define PCINT2_vect 0x06 /* Pin change interrupt vector 0 (for I/O port D). */
+#define PCINT_vect 0x02 /* Pin change interrupt vector 0 (for I/O port A). */
 
-#define DDRA  0x00 /* Data direction register for I/O port B. */
-#define PORTA 0x01 /* Data register for I/O port B. */
-#define PINA  0x02 /* Pin input register for I/O port B. */
+#define DDRA  0x00 /* Data direction register for I/O port A. */
+#define PORTA 0x01 /* Data register for I/O port A. */
+#define PINA  0x02 /* Pin input register for I/O port A. */
 
 #define PCICR 0x09 /* Pin change interrupt control register for all I/O ports. */
 #define PCIFR 0x0A /* Pin change interrupt flag register for all I/O ports. */
 
-#define PCMSK0 0x10 /* Pin change interrupt mask register for I/O port B. */
-#define PCMSK1 0x11 /* Pin change interrupt mask register for I/O port C. */
-#define PCMSK2 0x12 /* Pin change interrupt mask register for I/O port D. */
+#define PCMSKA0 0x10 /* Pin change interrupt mask register for I/O port A. */
 
-#define PCIE0 0 /* Pin change interrupt enable bit for I/O port B. */
-#define PCIE1 1 /* Pin change interrupt enable bit for I/O port C. */
-#define PCIE2 2 /* Pin change interrupt enable bit for I/O port D. */
-
-#define PCIF0 0 /* Pin change interrupt flag bit for I/O port A. */
+#define PCIEA 0 /* Pin change interrupt enable bit for I/O port A. */
+#define PCIFA0 0 /* Pin change interrupt flag bit for I/O port A. */
 
 #define PORTA0 0 /* Bit number for pin 0 at I/O port A. */
 #define PORTA1 1 /* Bit number for pin 1 at I/O port A. */
@@ -84,6 +80,150 @@
 #define PORTA6 6 /* Bit number for pin 6 at I/O port A. */
 #define PORTA7 7 /* Bit number for pin 7 at I/O port A. */
 #define PORTA8 8 /* Bit number for pin 8 at I/O port A. */
+#define PORTA9 9 /* Bit number for pin 9 at I/O port A. */
+#define PORTA10 10 /* Bit number for pin 10 at I/O port A. */
+#define PORTA11 11 /* Bit number for pin 11 at I/O port A. */
+#define PORTA12 12 /* Bit number for pin 12 at I/O port A. */
+#define PORTA13 13 /* Bit number for pin 13 at I/O port A. */
+
+#define PORTA14 14 //A0
+#define PORTA15 15//A1
+#define PORTA16 16 //A2
+#define PORTA17 17 //A3
+#define PORTA18 18 //A4
+#define PORTA19 19 //A5
+
+#define R0  0x00 /* Address for CPU register R0. */
+#define R1  0x01 /* Address for CPU register R1. */
+#define R2  0x02 /* Address for CPU register R2. */
+#define R3  0x03 /* Address for CPU register R3. */
+#define R4  0x04 /* Address for CPU register R4. */
+#define R5  0x05 /* Address for CPU register R5. */
+#define R6  0x06 /* Address for CPU register R6. */
+#define R7  0x07 /* Address for CPU register R7. */
+#define R8  0x08 /* Address for CPU register R8. */
+#define R9  0x09 /* Address for CPU register R9. */
+#define R10 0x0A /* Address for CPU register R10. */
+#define R11 0x0B /* Address for CPU register R11. */
+#define R12 0x0C /* Address for CPU register R12. */
+#define R13 0x0D /* Address for CPU register R13. */
+#define R14 0x0E /* Address for CPU register R14. */
+#define R15 0x0F /* Address for CPU register R15. */
+
+#define R16 0x10 /* Address for CPU register R16. */
+#define R17 0x11 /* Address for CPU register R17. */
+#define R18 0x12 /* Address for CPU register R18. */
+#define R19 0x13 /* Address for CPU register R19. */
+#define R20 0x14 /* Address for CPU register R20. */
+#define R21 0x15 /* Address for CPU register R21. */
+#define R22 0x16 /* Address for CPU register R22. */
+#define R23 0x17 /* Address for CPU register R23. */
+#define R24 0x18 /* Address for CPU register R24. */
+#define R25 0x19 /* Address for CPU register R25. */
+#define R26 0x1A /* Address for CPU register R26. */
+#define R27 0x1B /* Address for CPU register R27. */
+#define R28 0x1C /* Address for CPU register R28. */
+#define R29 0x1D /* Address for CPU register R29. */
+#define R30 0x1E /* Address for CPU register R30. */
+#define R31 0x1F /* Address for CPU register R31. */
+
+
+#define CPU_REGISTER_ADDRESS_WIDTH 32 /* 32 CPU registers in control unit. */
+#define CPU_REGISTER_DATA_WIDTH    32  /* 8 bit data width per CPU register. */
+#define IO_REGISTER_DATA_WIDTH     32  /* 8 bit data width per I/O location. */
+
+#define I 5 /* Interrupt flag in status register. */
+#define S 4 /* Signed flag in status register. */
+#define N 3 /* Negative flag in status register. */
+#define Z 2 /* Zero flag in status register. */
+#define V 1 /* Overflow flag in status register. */
+#define C 0 /* Carry flag in status register. */
+
+#define XL = R26;
+#define XH = R27;
+#define YL = R28;
+#define YH = R29;
+#define ZL = R30;
+#define ZH = R31;
+
+
+/********************************************************************************
+* set: Sets bit in specified register without affecting other bits.
+*
+*      - reg: Reference to the register.
+*      - bit: The bit to be set in the referenced register.
+********************************************************************************/
+#define set(reg, bit)  reg |= (1 << bit)
+
+/********************************************************************************
+* clr: Clears bit in specified register without affecting other bits.
+*
+*      - reg: Reference to the register.
+*      - bit: The bit to be cleared in the referenced register.
+********************************************************************************/
+#define clr(reg, bit)  reg &= ~(1 << (bit))
+
+/********************************************************************************
+* read: Reads bit from specified register. The return value is not equal to
+*       zero if the bit is high. If the bit is low the return value is zero.
+*
+*       - reg: Reference to the register.
+*       - bit: The bit to be read in the referenced register.
+********************************************************************************/
+#define read(reg, bit) (reg & (1 << (bit)))
+
+/********************************************************************************
+* cpu_state: Enumeration for the different states of the CPU instructio cycle.
+********************************************************************************/
+enum cpu_state
+{
+    CPU_STATE_FETCH,  /* Fetches next instruction from program memory. */
+    CPU_STATE_DECODE, /* Decodes the fetched instruction. */
+    CPU_STATE_EXECUTE /* Executes the decoded instruction. */
+};
+
+/********************************************************************************
+* cpu_instruction_name: Returns the name of specified instruction.
+*
+*                       - instruction: The specified CPU instruction.
+********************************************************************************/
+const char* cpu_instruction_name(const uint32_t instruction);
+
+/********************************************************************************
+* cpu_state_name: Returns the name of specified CPU state.
+*
+*                 - state: The specified CPU state.
+********************************************************************************/
+const char* cpu_state_name(const enum cpu_state state);
+
+/********************************************************************************
+* cpu_register_name: Returns the name of specified CPU register.
+*
+*                    - reg: The specified CPU register.
+********************************************************************************/
+static const char* cpu_register_name(const uint32_t reg)
+{
+    if (reg < CPU_REGISTER_ADDRESS_WIDTH)
+    {
+        static char s[10] = { '\0' };
+        sprintf(s, "R%hu", reg);
+        return s;
+    }
+    else
+    {
+        return "Unknown";
+    }
+}
+
+/********************************************************************************
+* get_binary: Returns specified number as a binary string with specified
+*             minimum number of characters.
+*
+*             - num      : The specified number.
+*             - min_chars: Minimum number of characters in the returned string.
+********************************************************************************/
+const char* get_binary(uint32_t num,
+                       const uint8_t min_chars);
 
 
 

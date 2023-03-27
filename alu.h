@@ -55,3 +55,5 @@ uint8_t alu(const uint32_t operation,
             const uint32_t a, 
             const uint32_t b, 
             uint8_t* sr);
+
+#endif /* ALU_H_ */

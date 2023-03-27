@@ -1,3 +1,15 @@
+
+
+#include <avr/io.h>
+
+
+int main(void)
+{
+    /* Replace with your application code */
+    while (1) 
+    {
+    }
+}
 /********************************************************************************
 * main.c: Demonstration of a 32-bit CPU in progress, based on the AVR architecture.
 ********************************************************************************/
@@ -11,3 +23,4 @@ int main(void)
    cpu_controller_run_by_input();
    return 0;
 }
+

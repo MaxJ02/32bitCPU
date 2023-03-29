@@ -12,6 +12,10 @@ static void pci_check_for_interrupt_requests(void);
 static void generate_interrupt(const uint8_t interrupt_request);
 static void return_from_interrupt(void);
 
+static inline void monitor_pcint0(void);
+static inline void monitor_pcint1(void);
+static inline void monitor_pcint2(void);
+
 /// STATIC VARIABLES
 static uint32_t ir; 
 static uint8_t pc;  
@@ -261,7 +265,7 @@ void control_unit_run_next_state(void)
             }
             case NCE:
             {
-                //todo drivrutiner till 7 seg. så att den ger ut 69 på displayen
+                //todo drivrutiner till 7 seg. sÃ¥ att den ger ut 69 pÃ¥ displayen
                 break;
             }
             default:  /* System reset if error occurs. */

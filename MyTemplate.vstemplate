@@ -1,0 +1,33 @@
+<VSTemplate Version="3.0.0" xmlns="http://schemas.microsoft.com/developer/vstemplate/2005" Type="Project">
+  <TemplateData>
+    <Name>CPU Projekt</Name>
+    <Description>&lt;No description available&gt;</Description>
+    <ProjectType>CandCPP</ProjectType>
+    <ProjectSubType>
+    </ProjectSubType>
+    <SortOrder>1000</SortOrder>
+    <CreateNewFolder>true</CreateNewFolder>
+    <DefaultName>CPU Projekt</DefaultName>
+    <ProvideDefaultName>true</ProvideDefaultName>
+    <LocationField>Enabled</LocationField>
+    <EnableLocationBrowseButton>true</EnableLocationBrowseButton>
+    <Icon>__TemplateIcon.ico</Icon>
+  </TemplateData>
+  <TemplateContent>
+    <Project TargetFileName="CPU ATmega328P.cproj" File="CPU ATmega328P.cproj" ReplaceParameters="true">
+      <Folder Name="libm" TargetFolderName="libm" />
+      <ProjectItem ReplaceParameters="true" TargetFileName="alu.c">alu.c</ProjectItem>
+      <ProjectItem ReplaceParameters="true" TargetFileName="alu.h">alu.h</ProjectItem>
+      <ProjectItem ReplaceParameters="true" TargetFileName="control_unit.c">control_unit.c</ProjectItem>
+      <ProjectItem ReplaceParameters="true" TargetFileName="control_unit.h">control_unit.h</ProjectItem>
+      <ProjectItem ReplaceParameters="true" TargetFileName="cpu.h">cpu.h</ProjectItem>
+      <ProjectItem ReplaceParameters="true" TargetFileName="data_memory.c">data_memory.c</ProjectItem>
+      <ProjectItem ReplaceParameters="true" TargetFileName="data_memory.h">data_memory.h</ProjectItem>
+      <ProjectItem ReplaceParameters="true" TargetFileName="main.c">main.c</ProjectItem>
+      <ProjectItem ReplaceParameters="true" TargetFileName="program_memory.c">program_memory.c</ProjectItem>
+      <ProjectItem ReplaceParameters="true" TargetFileName="program_memory.h">program_memory.h</ProjectItem>
+      <ProjectItem ReplaceParameters="true" TargetFileName="stack.c">stack.c</ProjectItem>
+      <ProjectItem ReplaceParameters="true" TargetFileName="stack.h">stack.h</ProjectItem>
+    </Project>
+  </TemplateContent>
+</VSTemplate>

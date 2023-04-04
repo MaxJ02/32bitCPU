@@ -1,15 +1,13 @@
-#include "alu.h"
-
 /********************************************************************************
-* alu.c: Contains function definitions for implementation of an ALU
+* alu.c: Contains function declarations for implementation of an ALU
 *        (Aritmetic Logic Unit) for performing calculations and updating
 *        status bits SNZVC as described below:
 *
-*        S (Signed)  : Set if result is negative with overflow considered.
-*        N (Negative): Set if result is negative, i.e. S = result[7].
-*        Z (Zero)    : Set if result is zero, i.e. N = result == 0 ? 1 : 0.
-*        V (Overflow): Set if overflow occurs**.
-*        C (Carry)   : Set if result contains a carry bit, C = result[9].
+*        S (Signed)  : Set if result is negative with overflow considered*.
+*        N (Negative): Set if result is negative, i.e. N = result[7].
+*        Z (Zero)    : Set if result is zero, i.e. Z = result == 0 ? 1 : 0.
+*        V (Overflow): Set if signed overflow occurs**.
+*        C (Carry)   : Set if result contains a carry bit, i.e. C = result[8]***.
 *
 *        * Signed flag is set if result is negative (N = 1) while
 *          overflow hasn't occured (V = 0) or result is positive (N = 0)
@@ -21,22 +19,31 @@
 *          0110 0110. Since most significant bit is cleared, the N-flag is
 *          cleared and the number if positive. However, overflow occured,
 *          since the two numbers -100 and 50 have different signs and the
-*          result has the same sign as the subtrahend 50. Therefore the
-*          V-flag. Since N = 0 && V == 1, the S-flag is set. Therefore
-*          the number is correctly intepreted as negative.
+*          result has the same sign as the subtrahend 50. Hence the V-flag
+*          is set. Since N = 0 and V = 1, the S-flag is also set.
+*          Therefore the number is correctly intepreted as negative.
 *
-*        ** Overflow occurs:
+*        ** Signed overflow occurs:
 *
 *           a) During addition (+) if the operands A and B are of the
 *              same sign and the result is of the opposite sign, i.e.
 *
-*              V = (A[7] == B[7]) && (A[7] != result[7]) : 1 : 0
+*              V = (A[7] == B[7]) && (A[7] != result[7]) ? 1 : 0
 *
 *           b) During subtraction (-) if the operands A and B are of the
 *              opposite sign and the result has the same sign as B, i.e.
 *
-*              V = (A[7] != B[7]) && (B[7] == result[7]) : 1 : 0
+*              V = (A[7] != B[7]) && (B[7] == result[7]) ? 1 : 0
+*
+*        *** One instance when the carry bit is set is when unsigned overflow
+*            occurs, for instance when adding two numbers 255 and 1 into an
+*            8 bit destination. The result is equal to 0 (with carry set),
+*            since 1111 1111 + 1 = 1 0000 0000, which gets truncated to
+*            0000 0000. Since result[8] == 1, the carry bit is set.
+*            Unsigned overflow occurs for the timer circuits of microcontroller
+*            ATmega328P when counting up in Normal Mode.
 ********************************************************************************/
+#include "alu.h"
 
 /********************************************************************************
 * alu: Performs calculation with specified operands and returns the result.
@@ -48,67 +55,57 @@
 *      - b        : Second operand.
 *      - sr       : Reference to status register containing SNZVC flags.
 ********************************************************************************/
-
-uint32_t alu (const uint32_t operation,
-	          const uint32_t a,
-	          const uint32_t b,
-	          uint8_t* sr)
+uint32_t alu(const uint16_t operation,
+            const uint32_t a,
+            const uint32_t b,
+            uint8_t* sr)
 {
-	uint64_t result = 0x00;
-	*sr &= ~((1 << S) | (1 << N) | (1 << Z) | (1 << V) | (1 << C));
+   uint64_t result = 0x00;
+   *sr &= ~((1 << S) | (1 << N) | (1 << Z) | (1 << V) | (1 << C));
 
-	switch(operation)
-	{
-		case OR:
-		{
-			result = a | b;
-			break;
-		}
-		case AND:
-		{
-			result = a & b;
-			break;
-		}
-		case XOR:
-		{
-			result = ;
-			break;
-		}
-		case ADD:
-		{
-			result = a + b;
+   switch (operation)
+   {
+      case OR:
+      {
+         result = a | b; 
+         break;
+      }
+      case AND:
+      {
+         result = a & b;
+         break;
+      }
+      case XOR:
+      {
+         result = a ^ b;
+         break;
+      }
+      case ADD:
+      {
+         result = a + b;
 
-			if ((read(a, 7) == read(b, 7)) && (read(result, 7) != read(a, 7)))
-			{
-				set(*sr, V);
-			}
-			break;
-		}
-		case SUB:
-		{
-			result = a - b;
-			if (read(result, 15)) result += 256;
+         if ((read(a, 31) == read(b, 31)) && (read(result, 31) != read(a, 31)))
+         {
+            set(*sr, V);
+         }
+         break;
+      }
+      case SUB:
+      {
+         result = a + (pow(2, 31) - b); 
 
-			if ((read(a, 7) != read(b, 7)) && (read(result, 7) == read(b, 7)))
-			{
-				set(*sr, V);
-			}
-			break;
-		}
-		default:
-		{
-			printf("Invalid ALU operation!\n\n");
-			return 0x00;
-		}
-	}
-	if (read(result, 7)) set(*sr, N);
-	if (result == 0) set(*sr, Z);
-	if (read(result, 8)) set(*sr, C);
+         if ((read(a, 31) == read((pow(2, 31) - b), 31)) && (read(result, 31) != read(a, 31)))
+         {
+            set(*sr, V);
+         }
+         break;
+      }
+   }
 
-	if ((bool)read(*sr, N) != (bool)read(*sr, V))
-	{
-		set(*sr, S);
-	}
+   if (read(result, 31) == 1)         set(*sr, N);
+   if ((uint32_t)(result) == 0)       set(*sr, Z);
+   if (read(result, 32) == 1)         set(*sr, C);
+   if (read(*sr, N) != read(*sr, V)) set(*sr, S);
 
-	return (uint64_t)(result);
+   return (uint32_t)(result);
 }

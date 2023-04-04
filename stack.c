@@ -1,26 +1,16 @@
 /********************************************************************************
-* stack.c: Contains function definitions for implementation of a 4 kB stack, 
-*          which grows downward.
+* stack.c: Contains function definitions for implementation of 1 kB stack.
 ********************************************************************************/
 #include "stack.h"
 
-/********************************************************************************
-* stack: Stack with capacity of storing a lot of bytes.
-********************************************************************************/
-static uint32_t stack[STACK_ADDRESS_WIDTH];
+/* Static variables: */
+static uint32_t stack[STACK_ADDRESS_WIDTH]; /* 1 kB stack. */
+static uint16_t sp;      /* Stack pointer, points to last added value. */
+static bool stack_empty; /* Indicates if the stack is empty. */
 
 /********************************************************************************
-* sp: Stack pointer, points to the last added element to the stack.
-********************************************************************************/
-static uint16_t sp = STACK_ADDRESS_WIDTH - 1;
-
-/********************************************************************************
-* stack_empty: Indicates if the stack is empty. 
-********************************************************************************/
-static bool stack_empty = true;
-
-/********************************************************************************
-* stack_reset: Clears the stack.
+* stack_reset: Clears content on the entire stack and sets the stack pointer
+*              to the top of the stack.
 ********************************************************************************/
 void stack_reset(void)
 {
@@ -35,15 +25,19 @@ void stack_reset(void)
 }
 
 /********************************************************************************
-* stack_push: Pushes a byte to the bottom of the stack and returns 0 after
-*             successful execution. If the stack is full, no push is done
-*             and error code 1 is returned.
+* stack_push: Pushes 8 bit value to the stack, unless the stack is full.
+*             Success code 0 is returned after successful push, otherwise
+*             error code 1 is returned if the stack is already full.
 *
-*             - value: Value to push to the stack.
+*             - value: 8 bit value to push to the stack.
 ********************************************************************************/
 int stack_push(const uint32_t value)
 {
-   if (sp > 0)
+   if (sp == 0)
+   {
+      return 1;
+   }
+   else
    {
       if (stack_empty)
       {
@@ -56,21 +50,17 @@ int stack_push(const uint32_t value)
       }
       return 0;
    }
-   else
-   {
-      return 1;
-   }
 }
 
 /********************************************************************************
-* stack_pop: Returns a byte popped from the bottom of the stack. If the stack
-*            is empty, no read is done and 0 is returned.
+* stack_pop: Returns 8 bit value popped from the stack. If the stack is empty,
+*            the value 0x00 is returned.
 ********************************************************************************/
 uint32_t stack_pop(void)
 {
    if (stack_empty)
    {
-      return 0;
+      return 0x00;
    }
    else
    {
@@ -83,5 +73,29 @@ uint32_t stack_pop(void)
          stack_empty = true;
          return stack[sp];
       }
+   }
+}
+
+/********************************************************************************
+* stack_pointer: Returns the 16 bit address of the stack pointer.
+********************************************************************************/
+uint16_t stack_pointer(void)
+{
+   return sp;
+}
+
+/********************************************************************************
+* stack_last_added_value: Returns the last added value to the stack. If the
+*                         stack is empty, the value 0x00 is returned.
+********************************************************************************/
+uint32_t stack_last_added_value(void)
+{
+   if (stack_empty)
+   {
+      return 0x00;
+   }
+   else
+   {
+      return stack[sp];
    }
 }

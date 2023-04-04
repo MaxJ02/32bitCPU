@@ -1,26 +1,18 @@
-
-
-#include <avr/io.h>
-
-
-int main(void)
-{
-    /* Replace with your application code */
-    while (1) 
-    {
-    }
-}
 /********************************************************************************
-* main.c: Demonstration of a 32-bit CPU in progress, based on the AVR architecture.
+* main.c: Demonstration of an 8-bit CPU in progress, based on AVR architecture.
 ********************************************************************************/
-#include "cpu_controller.h"
+#include "control_unit.h"
 
 /********************************************************************************
-* main: Controls the program flow of the 32-bit processor via keyboard input from the user.
+* main: Controls the program flow of an 8-bit processor by keyboard input.
 ********************************************************************************/
 int main(void)
 {
-   cpu_controller_run_by_input();
-   return 0;
+	control_unit_reset();
+	
+	while (1)
+	{
+		control_unit_run_next_state();
+	}
+	return 0;
 }
-

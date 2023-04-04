@@ -50,7 +50,7 @@ int data_memory_write(const uint16_t address,
 *
 *                   - address: Read location in data memory.
 ********************************************************************************/
-uint8_t data_memory_read(const uint16_t address)
+uint32_t data_memory_read(const uint16_t address)
 {
    if (address < DATA_MEMORY_ADDRESS_WIDTH)
    {

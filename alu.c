@@ -60,7 +60,7 @@ uint32_t alu(const uint32_t operation,
             const uint32_t b,
             uint8_t* sr)
 {
-   uint32_t result = 0x00;
+   uint64_t result = 0x00;
    *sr &= ~((1 << S) | (1 << N) | (1 << Z) | (1 << V) | (1 << C));
 
    switch (operation)

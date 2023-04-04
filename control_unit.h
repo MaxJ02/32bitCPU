@@ -22,11 +22,5 @@ void control_unit_reset(void);
 ********************************************************************************/
 void control_unit_run_next_state(void);
 
-/********************************************************************************
-* control_unit_run_next_state: Runs next CPU instruction cycle, i.e. fetches
-*                              a new instruction from program memory, decodes
-*                              and executes it.
-********************************************************************************/
-void control_unit_run_next_instruction_cycle(void);
 
 #endif /* CONTROL_UNIT_H_ */

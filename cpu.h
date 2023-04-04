@@ -7,6 +7,7 @@
 
 /* Include directives: */
 #include <stdio.h>
+#include <avr/io.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -51,43 +52,48 @@
 #define LSR  0x23 /* Shifts content of a CPU register one step to the right. */
 #define SEI  0x24 /* Enables interrupts globally by setting the I-flag of the status register. */
 #define CLI  0x25 /* Disables interrupts globally by clearning the I-flag of the status register. */
+#define STIO 0x26 /* Writes to referenced I/O location in data memory (address 0 - 255). */
+#define LDIO 0x27 /* Reads from referenced I/O location in data memory (address 0 - 255). */
+#define ST   0x28 /* Writes to referenced location in data memory. (address 256 - 1999). */
+#define LD   0x29 /* Reads from referenced location in data memory (address 256 - 1999). */
 
 #define RESET_vect  0x00 /* Reset vector. */
-#define PCINT0_vect 0x02 /* Pin change interrupt vector 0 (for I/O port A). */
+#define PCINT_vect 0x02 /* Pin change interrupt vector (for I/O port A). */
 
 #define DDRA  0x00 /* Data direction register for I/O port A. */
 #define PORTA 0x01 /* Data register for I/O port A. */
 #define PINA  0x02 /* Pin input register for I/O port A. */
 
-#define PCICR 0x09 /* Pin change interrupt control register for all I/O ports. */
-#define PCIFR 0x0A /* Pin change interrupt flag register for all I/O ports. */
+#define ICR 0x03 /* Pin change interrupt control register for all I/O ports. */
+#define IFR 0x04 /* Pin change interrupt flag register for all I/O ports. */
 
-#define PCMSKA0 0x10 /* Pin change interrupt mask register for I/O port A. */
-
+#define PCMSKA 0x05 /* Pin change interrupt mask register for I/O port A. */
 #define PCIEA 0 /* Pin change interrupt enable bit for I/O port A. */
-#define PCIFA0 0 /* Pin change interrupt flag bit for I/O port A. */
+#define PCIFA 0 /* Pin change interrupt flag bit for I/O port A. */
 
-#define PORTA0 0 /* Bit number for pin 0 at I/O port A. */
-#define PORTA1 1 /* Bit number for pin 1 at I/O port A. */
-#define PORTA2 2 /* Bit number for pin 2 at I/O port A. */
-#define PORTA3 3 /* Bit number for pin 3 at I/O port A. */
-#define PORTA4 4 /* Bit number for pin 4 at I/O port A. */
-#define PORTA5 5 /* Bit number for pin 5 at I/O port A. */
-#define PORTA6 6 /* Bit number for pin 6 at I/O port A. */
-#define PORTA7 7 /* Bit number for pin 7 at I/O port A. */
-#define PORTA8 8 /* Bit number for pin 8 at I/O port A. */
-#define PORTA9 9 /* Bit number for pin 9 at I/O port A. */
-#define PORTA10 10 /* Bit number for pin 10 at I/O port A. */
-#define PORTA11 11 /* Bit number for pin 11 at I/O port A. */
-#define PORTA12 12 /* Bit number for pin 12 at I/O port A. */
-#define PORTA13 13 /* Bit number for pin 13 at I/O port A. */
+#define PORTA0 0 /* Bit number for pin 0 at I/O port D. */
+#define PORTA1 1 /* Bit number for pin 1 at I/O port D. */
+#define PORTA2 2 /* Bit number for pin 2 at I/O port D. */
+#define PORTA3 3 /* Bit number for pin 3 at I/O port D. */
+#define PORTA4 4 /* Bit number for pin 4 at I/O port D. */
+#define PORTA5 5 /* Bit number for pin 5 at I/O port D. */
+#define PORTA6 6 /* Bit number for pin 6 at I/O port D. */
+#define PORTA7 7 /* Bit number for pin 7 at I/O port D. */
 
-#define PORTA14 14 //A0
-#define PORTA15 15//A1
-#define PORTA16 16 //A2
-#define PORTA17 17 //A3
-#define PORTA18 18 //A4
-#define PORTA19 19 //A5
+#define PORTA8 8 /* Bit number for pin 8 at I/O port B. */
+#define PORTA9 9 /* Bit number for pin 9 at I/O port B. */
+#define PORTA10 10 /* Bit number for pin 10 at I/O port B. */
+#define PORTA11 11 /* Bit number for pin 11 at I/O port B. */
+#define PORTA12 12 /* Bit number for pin 12 at I/O port B. */
+#define PORTA13 13 /* Bit number for pin 13 at I/O port B. */
+
+#define PORTA14 14 /* Bit number for pin A0 at I/O port A. */
+#define PORTA15 15 /* Bit number for pin A1 at I/O port A. */
+#define PORTA16 16 /* Bit number for pin A2 at I/O port A. */
+#define PORTA17 17 /* Bit number for pin A3 at I/O port A. */
+#define PORTA18 18 /* Bit number for pin A4 at I/O port A. */
+#define PORTA19 19 /* Bit number for pin A5 at I/O port A. */
+
 
 #define R0  0x00 /* Address for CPU register R0. */
 #define R1  0x01 /* Address for CPU register R1. */
@@ -124,8 +130,8 @@
 #define R31 0x1F /* Address for CPU register R31. */
 
 #define CPU_REGISTER_ADDRESS_WIDTH 32 /* 32 CPU registers in control unit. */
-#define CPU_REGISTER_DATA_WIDTH    8  /* 8 bit data width per CPU register. */
-#define IO_REGISTER_DATA_WIDTH     8  /* 8 bit data width per I/O location. */
+#define CPU_REGISTER_DATA_WIDTH    32  /* 8 bit data width per CPU register. */
+#define IO_REGISTER_DATA_WIDTH     32  /* 8 bit data width per I/O location. */
 
 #define I 5 /* Interrupt flag in status register. */
 #define S 4 /* Signed flag in status register. */

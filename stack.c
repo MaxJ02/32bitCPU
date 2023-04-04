@@ -1,87 +1,75 @@
-/********************************************************************************
-* stack.c: Contains function definitions for implementation of a 4 kB stack, 
-*          which grows downward.
-********************************************************************************/
 #include "stack.h"
 
-/********************************************************************************
-* stack: Stack with capacity of storing a lot of bytes.
-********************************************************************************/
-static uint32_t stack[STACK_ADDRESS_WIDTH];
+/* Static variables: */
+static uint32_t stack[STACK_ADDRESS_WIDTH]; /* 1 kB stack. */
+static uint16_t sp;      /* Stack pointer, points to last added value. */
+static bool stack_empty; /* Indicates if the stack is empty. */
 
 /********************************************************************************
-* sp: Stack pointer, points to the last added element to the stack.
-********************************************************************************/
-static uint16_t sp = STACK_ADDRESS_WIDTH - 1;
-
-/********************************************************************************
-* stack_empty: Indicates if the stack is empty. 
-********************************************************************************/
-static bool stack_empty = true;
-
-/********************************************************************************
-* stack_reset: Clears the stack.
+* stack_reset: Clears content on the entire stack and sets the stack pointer
+*              to the top of the stack.
 ********************************************************************************/
 void stack_reset(void)
 {
-   for (uint16_t i = 0; i < STACK_ADDRESS_WIDTH; ++i)
-   {
-      stack[i] = 0x00;
-   }
+	for (uint32_t i = 0; i < STACK_ADDRESS_WIDTH; ++i)
+	{
+		stack[i] = 0;
+	}
 
-   sp = STACK_ADDRESS_WIDTH - 1;
-   stack_empty = true;
-   return;
+	sp = STACK_ADDRESS_WIDTH - 1;
+	stack_empty = true;
+	return;
 }
 
 /********************************************************************************
-* stack_push: Pushes a byte to the bottom of the stack and returns 0 after
-*             successful execution. If the stack is full, no push is done
-*             and error code 1 is returned.
+* stack_push: Pushes 32 bit value to the stack, unless the stack is full.
+*             Success code 0 is returned after successful push, otherwise
+*             error code 1 is returned if the stack is already full.
 *
-*             - value: Value to push to the stack.
+*             - value: 32 bit value to push to the stack.
 ********************************************************************************/
 int stack_push(const uint32_t value)
 {
-   if (sp > 0)
-   {
-      if (stack_empty)
-      {
-         stack[sp] = value;
-         stack_empty = false;
-      }
-      else
-      {
-         stack[--sp] = value;
-      }
-      return 0;
-   }
-   else
-   {
-      return 1;
-   }
+	if (sp == 0)
+	{
+		return 1;
+	}
+	else
+	{
+		if (stack_empty)
+		{
+			stack[sp] = value;
+			stack_empty = false;
+		}
+		else
+		{
+			stack[--sp] = value;
+		}
+		return 0;
+	}
 }
 
 /********************************************************************************
-* stack_pop: Returns a byte popped from the bottom of the stack. If the stack
-*            is empty, no read is done and 0 is returned.
+* stack_pop: Returns 32 bit value popped from the stack. If the stack is empty,
+*            the value 0x00 is returned.
 ********************************************************************************/
 uint32_t stack_pop(void)
 {
-   if (stack_empty)
-   {
-      return 0;
-   }
-   else
-   {
-      if (sp < STACK_ADDRESS_WIDTH - 1)
-      {
-         return stack[sp++];
-      }
-      else
-      {
-         stack_empty = true;
-         return stack[sp];
-      }
-   }
+	if (stack_empty)
+	{
+		return 0;
+	}
+	else
+	{
+		if (sp < STACK_ADDRESS_WIDTH - 1)
+		{
+			return stack[sp++];
+		}
+		else
+		{
+			stack_empty = true;
+			return stack[sp];
+		}
+	}
 }
+

@@ -1,38 +1,35 @@
 #include "control_unit.h"
 
+/* Static functions: */
 static void monitor_interrupts(void);
-static void pci_check_event(
-    const uint8_t pin_reg,
-    const uint8_t mask_reg,
-    const uint8_t pcie_bit,
-    const uint8_t flag_bit,
-    uint8_t* pin_reg_last_value);
+static void check_for_irq(void);
+static void generate_interrupt(const uint16_t interrupt_vector);
+static inline void monitor_pcint(void);
+static void control_unit_io_reset(void);
+static void control_unit_io_update(void);
+static inline void return_from_interrupt(void);
 
-static void pci_check_for_interrupt_requests(void);
-static void generate_interrupt(const uint8_t interrupt_request);
-static void return_from_interrupt(void);
 
-static inline void monitor_pcint0(void);
-static inline void monitor_pcint1(void);
-static inline void monitor_pcint2(void);
+/* Static variables: */
+static uint64_t ir; /* Instruction register, stores next instruction to execute. */
+static uint16_t pc;  /* Program counter, stores address to next instruction to fetch. */
+static uint32_t mar;
 
-/// STATIC VARIABLES
-static uint32_t ir; 
-static uint8_t pc;  
-static uint8_t mar; 
-static uint8_t sr;  
+static uint8_t sr;  /* Status register, stores status bits ISNZVC. */
 
-static uint8_t op_code;
-static uint8_t op1;
-static uint8_t op2;
+static volatile uint16_t op_code; /* Stores OP-code, for example LDI, OUT, JMP etc. */
+static uint16_t op1;     /* Stores first operand, most often a destination. */
+static uint32_t op2;     /* Stores second operand, most often a value or read address. */
 
-static enum cpu_state state;
-static uint8_t pinb_last_value;
-static uint8_t pinc_last_value;
-static uint8_t pind_last_value;
+static enum cpu_state state;                    /* Stores current state. */
+static uint32_t reg[CPU_REGISTER_ADDRESS_WIDTH]; /* CPU-registers R0 - R31. */
 
-static uint8_t reg[CPU_REGISTER_ADDRESS_WIDTH];
+static uint32_t pina_previous; /* Stores previous input values of PINB (for monitoring). */
 
+
+/********************************************************************************
+* control_unit_reset: Resets control unit registers and corresponding program.
+********************************************************************************/
 void control_unit_reset(void)
 {
     ir = 0x00;
@@ -45,397 +42,417 @@ void control_unit_reset(void)
     op2 = 0x00;
 
     state = CPU_STATE_FETCH;
-    
-    for (uint8_t i = 0; i < CPU_REGISTER_ADDRESS_WIDTH; ++i)
+
+    pina_previous = 0x00;
+
+    for (uint32_t i = 0; i < CPU_REGISTER_ADDRESS_WIDTH; ++i)
     {
         reg[i] = 0x00;
     }
-    pinb_last_value = 0x00;
-    pinc_last_value = 0x00;
-    pind_last_value = 0x00;
 
-    data_memory_reset = 0x00;
+
+    data_memory_reset();
     stack_reset();
     program_memory_write();
+	control_unit_io_reset();
     return;
 }
 
+/********************************************************************************
+* control_unit_run_next_state: Runs next state in the CPU instruction cycle:
+********************************************************************************/
 void control_unit_run_next_state(void)
 {
     switch (state)
     {
-        case CPU_STATE_FETCH
-        {
-            ir = program_memory_write(pc)
-            mar = pc;
-            pc++;
-            state = CPU_STATE_DECODE;
-            break;
-        }
-            case CPU_STATE_DECODE
-        {
-            op_code = ir >> 16;
-            op1 = ir >> 8;
-            op2 = ir;
-            state = CPU_STATE_EXECUTE;
-            break;
-        }
-            case CPU_STATE_EXECUTE
-        {
-                     switch (op_code) /* Checks the OP code.*/
-         {
-            case NOP: /* NOP => do nothing. */
-            {
-               break;
-            }
-            case LDI: /* LDI R16, 0x01 => op_code = LDI, op1 = R16, op2 = 0x01 */
-            {
-               reg[op1] = op2;
-               break;
-            }
-            case MOV: /* MOV R17, R16 => op_code = MOV, op1 = R17, op2 = R16 */
-            {
-               reg[op1] = reg[op2];
-               break;
-            }
-            case OUT: /* OUT DDRB, R16 => op_code = OUT, op1 = DDRB, op2 = R16 */
-            {
-               data_memory_write(op1, reg[op2]);
-               break;
-            }
-            case IN: /* IN R16, PINB => op_code = IN, op1 = R16, op2 = PINB */
-            {
-               reg[op1] = data_memory_read(op2);
-               break;
-            }
-            case STS: /* STS counter, R16 => op_code = STS, op1 = counter, op2 = R16 */
-            {
-               data_memory_write(op1 + 256, reg[op2]);
-               break;
-            }
-            case LDS: /* LDS R16, counter => op_code = LDS, op1 = R16, op2 = counter*/
-            {
-               reg[op1] = data_memory_read(op2 + 256);
-               break;
-            }
-            case ORI: /* ORI R16, 0x01 => op_code = ORI, op1 = R16, op2 = 0x01 */
-            {
-               reg[op1] = alu(OR, reg[op1], op2, &sr);
-               break;
-            }
-            case ANDI: /* ANDI R17, 0x20 => op_code = ANDI, op1 = R17, op2 = 0x20 */
-            {
-               reg[op1] = alu(AND, reg[op1], op2, &sr);
-               break;
-            }
-            case XORI: /* XORI R18, 0x05 => op_code = XORI, op1 = R18, op2 = 0x05 */
-            {
-               reg[op1] = alu(XOR, reg[op1], op2, &sr);
-               break;
-            }
-            case OR: /* OR R16, R17 => op_code = OR, op1 = R16, op2 = R17 */
-            {
-               reg[op1] = alu(OR, reg[op1], reg[op2], &sr);
-               break;
-            }
-            case AND: /* AND R16, R17 => op_code = AND, op1 = R16, op2 = R17 */
-            {
-               reg[op1] = alu(AND, reg[op1], reg[op2], &sr);
-               break;
-            }
-            case XOR: /* XOR R16, R17 => op_code = XOR, op1 = R16, op2 = R17 */
-            {
-               reg[op1] = alu(XOR, reg[op1], reg[op2], &sr);
-               break;
-            }
-            case ADDI: /* ADDI R16, 0x10 => op_code = ADDI, op1 = R16, op2 = 0x10 */
-            {
-               reg[op1] = alu(ADD, reg[op1], op2, &sr);
-               break;
-            }
-            case SUBI: /* SUBI R17, 0x05 => op_code = SUBI, op1 = R17, op2 = 0x05 */
-            {
-               reg[op1] = alu(SUB, reg[op1], op2, &sr);
-               break;
-            }
-            case ADD: /* ADD R16, R17 => op_code = ADD, op1 = R16, op2 = R17 */
-            {
-               reg[op1] = alu(ADD, reg[op1], reg[op2], &sr);
-               break;
-            }
-            case SUB: /* SUB R17, R18 => op_code = SUB, op1 = R17, op2 = R18 */
-            {
-               reg[op1] = alu(SUB, reg[op1], reg[op2], &sr);
-               break;
-            }
-            case INC: /* INC R16 => op_code = INC, op1 = R16 */
-            {
-               reg[op1] = alu(ADD, reg[op1], 0x01, &sr);
-               break;
-            }
-            case DEC: /* DEC R17 => op_code = INC, op1 = R17 */
-            {
-               reg[op1] = alu(SUB, reg[op1], 0x01, &sr);
-               break;
-            }
-            case CPI: /* CPI R16, 0x01 => op_code = CPI, op1 = R16, op2 = 0x01 */
-            {
-               (void)alu(SUB, reg[op1], op2, &sr);
-               break;
-            }
-            case CP: /* CPI R16, R17 => op_code = CP, op1 = R16, op2 = R17 */
-            {
-               (void)alu(SUB, reg[op1], reg[op2], &sr);
-               break;
-            }
-            case JMP: /* JMP 0x05 => op_code = JMP, op1 = 0x05 */
-            {
-               pc = op1;
-               break;
-            }
-            case BREQ: /* BREQ 0x10 => op_code = BREQ, op1 = 0x10 */
-            {
-               if (read(sr, Z)) pc = op1;
-               break;
-            }
-            case BRNE: /* BRNE 0x20 => op_code = BRNE, op1 = 0x20 */
-            {
-               if (!read(sr, Z)) pc = op1;
-               break;
-            }
-            case BRGE: /* BRGE 0x30 => op_code = BRGE, op1 = 0x30 */
-            {
-               if (!read(sr, S)) pc = op1;
-               break;
-            }
-            case BRGT: /* BRGT 0x40 => op_code = BRGT, op1 = 0x40 */
-            {
-               if (!read(sr, S) && !read(sr, Z)) pc = op1;
-               break;
-            }
-            case BRLE: /* BRLE 0x50 => op_code = BRLE, op1 = 0x50 */
-            {
-               if (read(sr, S) || (read(sr, Z))) pc = op1;
-               break;
-            }
-            case BRLT: /* BRLT 0x60 => op_code = BRLT, op1 = 0x60 */
-            {
-               if (read(sr, S)) pc = op1;
-               break;
-            }
-            case CALL: /* CALL 0x10 => op_code = CALL, op1 = 0x10 */
-            {
-               stack_push(pc);
-               pc = op1;
-               break;
-            }
-            case RET: /* RET => op_code = RET */
-            {
-               pc = stack_pop();
-               break;
-            }
-            case RETI: /* RETI => op_code = RETI */
-            {
-               return_from_interrupt();
-               break;
-            }
-            case PUSH: /* PUSH R16 => op_code = PUSH, op1 = R16 */
-            {
-               stack_push(reg[R16]);
-               break;
-            }
-            case POP: /* POP R16 => op_code = POP, op1 = R16 */
-            {
-               reg[op1] = stack_pop();
-               break;
-            }
-            case SEI: /* SEI => op_code = SEI */
-            {
-               set(sr, I);
-               break;
-            }
-            case CLI: /* CLI => op_code = CLI */
-            {
-               clr(sr, I);
-               break;
-            }
-            case SKY:
-            {
-                break;
-            }
-            case NCE:
-            {
-                //todo drivrutiner till 7 seg. så att den ger ut 69 på displayen
-                break;
-            }
-            default:  /* System reset if error occurs. */
-            {
-               control_unit_reset();
-               break;
-            }
-        }
-        pci_break_for_interrupt_requests();
-        state = CPU_STATE_FETCH;
+    case CPU_STATE_FETCH:
+    {
+        ir = program_memory_read(pc); /* Fetches next instruction. */
+        mar = pc;                     /* Stores address of current instruction. */
+        pc++;                         /* Program counter points to next instruction. */
+        state = CPU_STATE_DECODE;     /* Decodes the instruction during next clock cycle. */
         break;
+    }
+    case CPU_STATE_DECODE:
+    {
+        op_code = ir >> 48;           /* Bit 23 downto 16 consists of the OP code. */
+        op1 = ir >> 32;                /* Bit 15 downto 8 consists of the first operand. */
+        op2 = ir;                     /* Bit 7 downto 0 consists of the second operand. */
+        state = CPU_STATE_EXECUTE;    /* Executes the instruction during next clock cycle. */
+        break;
+    }
+    case CPU_STATE_EXECUTE:
+    {
+        switch (op_code) /* Checks the OP code.*/
+        {
+        case NOP: /* NOP => do nothing. */
+        {
+            break;
+        }
+        case LDI: /* Loads constant into specified CPU register. */
+        {
+            reg[op1] = op2;
+            break;
+        }
+        case MOV: /* Copies value to specified CPU register. */
+        {
+            reg[op1] = reg[op2];
+            break;
+        }
+        case OUT: /* Writes value to I/O location (address 0 - 255) in data memory. */
+        {
+            if (op1 == PINA)
+			{
+				const uint32_t data = data_memory_read(PORTA);
+				data_memory_write(PORTA, data ^ reg[op2]);
+			}
+			else
+			{
+				data_memory_write(op1, reg[op2]);
+			}
+            break;
+        }
+        case IN: /* Reads value from I/O location (address 0 - 255) in data memory. */
+        {
+            reg[op1] = data_memory_read(op2);
+            break;
+        }
+        case STS: /* Stores value to data memory (address 256 - 511, hence an offset of 256). */
+        {
+            data_memory_write(op1, reg[op2]);
+            break;
+        }
+        case LDS: /* Loads value from data memory (address 256 - 511, hence an offset of 256). */
+        {
+            reg[op1] = data_memory_read(op2);
+            break;
+        }
+        case CLR: /* Clears content of CPU register. */
+        {
+            reg[op1] = 0x00;
+            break;
+        }
+        case ORI: /* Performs bitwise OR with a constant. */
+        {
+            reg[op1] = alu(OR, reg[op1], op2, &sr);
+            break;
+        }
+        case ANDI: /* Performs bitwise AND with a constant. */
+        {
+            reg[op1] = alu(AND, reg[op1], op2, &sr);
+            break;
+        }
+        case XORI: /* Performs bitwise XOR with a constant. */
+        {
+            reg[op1] = alu(XOR, reg[op1], op2, &sr);
+            break;
+        }
+        case OR: /* Performs bitwise OR with content in CPU register. */
+        {
+            reg[op1] = alu(OR, reg[op1], reg[op2], &sr);
+            break;
+        }
+        case AND: /* Performs bitwise AND with content in CPU register. */
+        {
+            reg[op1] = alu(AND, reg[op1], reg[op2], &sr);
+            break;
+        }
+        case XOR: /* Performs bitwise AND with content in CPU register. */
+        {
+            reg[op1] = alu(XOR, reg[op1], reg[op2], &sr);
+            break;
+        }
+        case ADDI: /* Performs addition with a constant. */
+        {
+            reg[op1] = alu(ADD, reg[op1], op2, &sr);
+            break;
+        }
+        case SUBI: /* Performs subtraction with a constant. */
+        {
+            reg[op1] = alu(SUB, reg[op1], op2, &sr);
+            break;
+        }
+        case ADD: /* Performs addition with a CPU register. */
+        {
+            reg[op1] = alu(ADD, reg[op1], reg[op2], &sr);
+            break;
+        }
+        case SUB: /* Performs subtraction with a CPU register. */
+        {
+            reg[op1] = alu(SUB, reg[op1], reg[op2], &sr);
+            break;
+        }
+        case INC: /* Increments content of a CPU register. */
+        {
+            reg[op1] = alu(ADD, reg[op1], 1, &sr);
+            break;
+        }
+        case DEC: /* Decrements content of a CPU register. */
+        {
+            reg[op1] = alu(SUB, reg[op1], 1, &sr);
+            break;
+        }
+        case CPI: /* Compares content between CPU register with a constant. */
+        {
+            (void)alu(SUB, reg[op1], op2, &sr); /* Return value is not stored. */
+            break;
+        }
+        case CP: /* Compares content between two CPU registers. */
+        {
+            (void)alu(SUB, reg[op1], reg[op2], &sr); /* Return value is not stored. */
+            break;
+        }
+        case JMP: /* Jumps to specified address. */
+        {
+            pc = op1;
+            break;
+        }
+        case BREQ: /* Branches to specified address i Z flag is set. */
+        {
+            if (read(sr, Z)) pc = op1;
+            break;
+        }
+        case BRNE: /* Branches to specified address if Z flag is cleared. */
+        {
+            if (!read(sr, Z)) pc = op1;
+            break;
+        }
+        case BRGE: /* Branches to specified address if S flag is cleared. */
+        {
+            if (!read(sr, S)) pc = op1;
+            break;
+        }
+        case BRGT: /* Branches to specified address if both S and Z flags are cleared. */
+        {
+            if (!read(sr, S) && !read(sr, Z)) pc = op1;
+            break;
+        }
+        case BRLE: /* Branches to specified address if S or Z flag is set. */
+        {
+            if (read(sr, S) || read(sr, Z)) pc = op1;
+            break;
+        }
+        case BRLT: /* Branches to specified address if S flag is set. */
+        {
+            if (read(sr, S)) pc = op1;
+            break;
+        }
+        case CALL: /* Stores the return address on the stack and jumps to specified address. */
+        {
+            stack_push(pc);
+            pc = op1;
+            break;
+        }
+        case RET: /* Jumps to return address stored on the stack. */
+        {
+            pc = stack_pop();
+            break;
+        }
+        case RETI: /* Pops the return address from the stack and sets the global interrupt flag. */
+        {
+            pc = stack_pop();
+            set(sr, I);
+            break;
+        }
+        case PUSH: /* Stores content of specified CPU register on the stack. */
+        {
+            stack_push(reg[op1]);
+            break;
+        }
+        case POP: /* Loads value from the stack to a CPU-register. */
+        {
+            reg[op1] = stack_pop();
+            break;
+        }
+        case LSL: /* Shifts content of CPU register on step to the left. */
+        {
+            reg[op1] = reg[op1] << 1;
+            break;
+        }
+        case LSR: /* Shifts content of CPU register on step to the right. */
+        {
+            reg[op1] = reg[op1] >> 1;
+            break;
+        }
+        case SEI: /* Sets the global interrupt flag in the status register. */
+        {
+            set(sr, I);
+            break;
+        }
+        case CLI: /* Clears the global interrupt flag in the status register. */
+        {
+            clr(sr, I);
+            break;
+        }
+        case STIO:  /* Stores value to referenced I/O location (no offset). */
+        {
+            const uint16_t address = reg[op1] | (reg[op1 + 1] << 8);
+            data_memory_write(address, reg[op2]);
+            break;
+        }
+        case LDIO: /* Loads value from referenced I/O location (no offset). */
+        {
+            const uint16_t address = reg[op2] | (reg[op2 + 1] << 8);
+            reg[op1] = data_memory_read(address);
+            break;
+        }
+        case ST: /* Stores value to referenced data location (offset = 256). */
+        {
+            const uint16_t address = reg[op1] | (reg[op1 + 1] << 8);
+            data_memory_write(address, reg[op2]);
+            break;
+        }
+        case LD: /* Loads value from referenced data location (offset = 256). */
+        {
+            const uint16_t address = reg[op2] | (reg[op2 + 1] << 8);
+            reg[op1] = data_memory_read(address);
+            break;
         }
         default:
         {
-            control_unit_reset;
+            control_unit_reset(); /* System reset if error occurs. */
             break;
         }
+        }
+
+        state = CPU_STATE_FETCH;    /* Fetches next instruction during next clock cycle. */
+        check_for_irq();            /* Checks for interrupt request after each execute cycle. */
+        break;
     }
-    monitor_interrupts();
-    return;
-}
-
-void control_unit_run_next_instruction_cycle(void)
-{
-    do
+    default:                       /* System reset if error occurs. */
     {
-        control_unit_run_next_state();
-    } while (state != CPU_STATE_EXECUTE);
+        control_unit_reset();
+        break;
+    }
+    }
+
+    control_unit_io_update();
+    monitor_interrupts();            /* Monitors interrupts each clock cycle. */
     return;
 }
 
-void control_unit_print(void)
+static void control_unit_io_reset(void)
 {
-    printf("--------------------------------------------------------------------------------\n");
-    printf("Current subroutine:\t\t\t\t%s\n", program_memory_subroutine_name(mar));
-    printf("Current instruction:\t\t\t\t%s\n", cpu_instruction_name(op_code));
-    printf("Current state:\t\t\t\t\t%s\n", cpu_state_name(state));
-
-    printf("Program counter:\t\t\t\t%hu\n", pc);
-
-    printf("Instruction register:\t\t\t\t%s ", get_binary((ir >> 16) & 0xFF, 8));
-    printf("%s ", get_binary((ir >> 8) & 0xFF, 8));
-    printf("%s\n", get_binary(ir & 0xFF, 8));
-
-    printf("Status register (ISNZVC):\t\t\t%s\n\n", get_binary(sr, 6));
-
-    printf("Content in CPU register R16:\t\t\t%s\n", get_binary(reg[R16], 8));
-    printf("Content in CPU register R17:\t\t\t%s\n", get_binary(reg[R17], 8));
-    printf("Content in CPU register R18:\t\t\t%s\n", get_binary(reg[R18], 8));
-    printf("Content in CPU register R24:\t\t\t%s\n\n", get_binary(reg[R24], 8));
-
-    printf("Content in data direction register DDRB:\t%s\n", get_binary(data_memory_read(DDRB), 8));
-    printf("Content in data register PORTB:\t\t\t%s\n", get_binary(data_memory_read(PORTB), 8));
-    printf("Content in pin input register PINB:\t\t%s\n", get_binary(data_memory_read(PINB), 8));
-
-    printf("--------------------------------------------------------------------------------\n\n");
-    return;
+	
+	DDRB = 0;
+	DDRC = 0;
+	DDRD = 0;
+	
+    PORTB = 0;
+	PORTC = 0;
+	PORTD = 0;
+	return;
 }
+static void control_unit_io_update(void)
+{
+	const uint32_t ddra = data_memory_read(DDRA);
+	const uint32_t porta = data_memory_read(PORTA);
+	const uint32_t pina = PIND | ((uint32_t)(PINB) << 8) | ((uint32_t)(PINC) << 16);
+	
+	data_memory_write(PINA, pina);
+	
+	DDRB = (uint8_t)(ddra >> 8);
+	DDRC = (uint8_t)(ddra >> 16);
+	DDRD = (uint8_t)(ddra);
+	
+	PORTB = (uint8_t)(porta >> 8);
+	PORTC = (uint8_t)(porta >> 16);
+	PORTD = (uint8_t)(porta);
+	return;
+	
+}
+
+static inline void cpu_registers_clear(void)
+{
+	for (uint32_t* i = reg; i < reg + CPU_REGISTER_ADDRESS_WIDTH; ++i)
+	{
+		*i = 0x00;
+	}
+	return;
+}
+
 static void monitor_interrupts(void)
 {
-    pci_check_event(PINB, PCMSK0, PCIE0, PCIF0, &pinb_last_value);
-    pci_check_event(PINC, PCMSK1, PCIE1, PCIF1, &pinc_last_value);
-    pci_check_event(PIND, PCMSK2, PCIE2, PCIF2, &pind_last_value);
+	monitor_pcint();
+	return;
+}
+
+/********************************************************************************
+* check_for_irq: Checks for interrupt requests and generates an interrupt if
+*                the I flag in status register i set, a specific interrupt flag,
+*                such as PCIF0 in PCIFR, is set and the corresponding interrupt
+*                enable bit, such as PCIE0 in PCICR, i set. Before an interrupt
+*                is generated, the corresponding flag bit is cleared to
+*                terminate the interrupt request. Otherwise the interrupt
+*                will be generated again and again). A jump is made to the
+*                corresponding interrupt vector, such as PCINT0_vect.
+********************************************************************************/
+
+static void check_for_irq(void)
+{
+    if (read(sr, I))
+    {
+        const uint32_t pcifr = data_memory_read(IFR);
+        const uint32_t pcicr = data_memory_read(ICR);
+
+        if (read(pcifr, PCIFA) && read(pcicr, PCIEA))
+        {
+            data_memory_clear_bit(IFR, PCIFA);
+            generate_interrupt(PCINT_vect);
+        }
+    }
     return;
 }
-static void pci_check_event(const uint8_t pin_reg,
-    const uint8_t mask_reg,
-    const uint8_t interrupt_enable_bit,
-    const uint8_t flag_bit,
-    uint8_t* pin_reg_last_value)
-{
-    const uint8_t pin_reg_new_value = data_memory_read(pin_reg);
-    const uint8_t pcicr = data_memory_read(PCICR + 256);
-    const uint8_t pcmsk = data_memory_read(mask_reg + 256);
 
-    for (uint8_t i = 0; i < IO_REGISTER_DATA_WIDTH; ++i)
+/********************************************************************************
+* generate_interrupt: Generates and interrupt by jumping to specified interrupt
+*                     vector. Before the jump, the return address is stored
+*                     on the stack and the I-flag in the status register is
+*                     cleared so that no new interrupts are generated while
+*                     the current interrupt is executed.
+*
+*                     - interrupt_vector: Jump address for generating interrupt.
+********************************************************************************/
+static void generate_interrupt(const uint16_t interrupt_vector)
+{
+    stack_push(pc);
+    clr(sr, I);
+    pc = interrupt_vector;
+    return;
+}
+
+/********************************************************************************
+* monitor_pcint0: Monitors pin change interrupts on I/O port B. All pins where
+*                 pin change monitoring is enabled (corresponding mask bit in
+*                 PCMSK0 i set) is monitored by comparing current input signal
+*                 with the previous one. If they don't match, the corresponding
+*                 interrupt flag PCIF0 in the PCIFR register i set to generate
+*                 an interrupt request (IRQ).
+********************************************************************************/
+static inline void monitor_pcint(void)
+{
+    const uint32_t pina_current = data_memory_read(PINA);
+    const uint32_t pcmsk = data_memory_read(PCMSKA);
+
+    for (uint32_t i = 0; i < CPU_REGISTER_DATA_WIDTH; ++i)
     {
-        if (read(pin_reg_new_value, i) != read(*pin_reg_last_value, i))
+        if (read(pcmsk, i))
         {
-            if (read(pcicr, interrupt_enable_bit) && read(pcmsk, i))
+            if (read(pina_current, i) != read(pina_previous, i))
             {
-                uint8_t pcifr = data_memory_read(PCIFR + 256);
-                set(pcifr, flag_bit);
-                data_memory_write(PCIFR + 256, pcifr);
+                data_memory_set_bit(IFR, PCIF0);
                 break;
             }
         }
     }
 
-    *pin_reg_last_value = pin_reg_new_value;
+    pina_previous = pina_current;
     return;
 }
 
-static void pci_check_for_interrupt_requests(void)
+static inline void return_from_interrupt(void)
 {
-    uint8_t pcifr = data_memory_read(PCIFR + 256);
-
-    for (uint8_t i = PCIF0; i < PCIF2; ++i)
-    {
-        if (read(pcifr, i) && read(sr, I))
-        {
-            if (i == PCIF0)
-            {
-                generate_interrupt(PCINT0_vect);
-            }
-            else if (i == PCIF1)
-            {
-                generate_interrupt(PCINT1_vect);
-            }
-            else if (i == PCIF2)
-            {
-                generate_interrupt(PCINT2_vect);
-            }
-
-            clr(pcifr, i);
-            data_memory_write(PCIFR + 256, pcifr);
-        }
-    }
-    return;
-}
-static void generate_interrupt(const uint8_t interrupt_vector)
-{
-    stack_push(ir >> 16);
-    stack_push(ir >> 8);
-    stack_push(ir);
-    stack_push(pc);
-    stack_push(mar);
-    stack_push(sr);
-
-    stack_push(op_code);
-    stack_push(op1);
-    stack_push(op2);
-
-    stack_push(state);
-    stack_push(pinb_last_value);
-    stack_push(pinc_last_value);
-    stack_push(pind_last_value);
-
-    for (uint32_t i = 0; i < CPU_REGISTER_ADDRESS_WIDTH; ++i)
-    {
-        stack_push(reg[i]);
-    }
-
-    pc = interrupt_vector;
-    state = CPU_STATE_FETCH;
-    clr(sr, I);
-    return;
-}
-static void return_from_interrupt(void)
-{
-    for (uint8_t i = 0; i < CPU_REGISTER_ADDRESS_WIDTH; ++i)
-    {
-        reg[CPU_REGISTER_ADDRESS_WIDTH - 1 - i] = stack_pop();
-    }
-
-    pind_last_value = stack_pop();
-    pinc_last_value = stack_pop();
-    pinb_last_value = stack_pop();
-    state = stack_pop();
-
-    op2 = stack_pop();
-    op1 = stack_pop();
-    op_code = stack_pop();
-
-    sr = stack_pop();
-    mar = stack_pop();
-    pc = stack_pop();
-
-    ir = stack_pop();
-    ir |= stack_pop() << 8;
-    ir |= stack_pop() << 16;
-    return;
+	pc = stack_pop();
+	set(sr, I);
+	return;
 }
